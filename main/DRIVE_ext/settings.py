@@ -20,3 +20,5 @@ params["torch_device"] = device
 
 ## additional (moritz)
 params["failing_communication_ratio"] = 0.1
+params["misreporting_agents_ratio"] = 0.1
+params["misreporting_agents_estimate_relative"] = 0.9
