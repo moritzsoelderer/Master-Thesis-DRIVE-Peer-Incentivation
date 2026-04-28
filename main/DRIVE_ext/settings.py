@@ -1,7 +1,7 @@
 import torch
 
 CPU_DEVICE = "cpu"
-GPU_DEVICE = "gpu"
+GPU_DEVICE = "cuda"
 MPS_DEVICE = "mps"
 
 device_type = CPU_DEVICE
@@ -10,7 +10,7 @@ print(f"Using device: {device}")
 
 params = {}
 params["episodes_per_epoch"] = 10
-params["nr_epochs"] = 1000
+params["nr_epochs"] = 300
 params["nr_hidden_units"] = 64
 params["clip_norm"] = 1
 params["learning_rate"] = 0.001

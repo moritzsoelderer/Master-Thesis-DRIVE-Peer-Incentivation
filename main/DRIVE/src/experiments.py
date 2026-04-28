@@ -13,7 +13,6 @@ def run_episode(epoch, env, controller, params):
     request_messages_sent = 0
     response_messages_sent = 0
     drift_function = params["drift_function"]
-    joint_actions_history = []
     while not done:
         joint_action, joint_probs = controller.policy(observations)
         next_observations, rewards, done, info = env.step(joint_action)
@@ -25,7 +24,6 @@ def run_episode(epoch, env, controller, params):
         request_messages_sent += transition["request_messages_sent"]
         response_messages_sent += transition["response_messages_sent"]
         observations = next_observations
-        joint_actions_history.append(joint_action)
     return {
         "discounted_returns": env.discounted_returns,
         "undiscounted_returns": env.undiscounted_returns,
@@ -35,7 +33,6 @@ def run_episode(epoch, env, controller, params):
         "request_messages_sent": request_messages_sent*1.0/time_step,
         "response_messages_sent": response_messages_sent*1.0/time_step,
         "messages_sent": (request_messages_sent+response_messages_sent)*1.0/time_step,
-        "joint_actions_history": joint_actions_history
     }
 
 def run_episodes(epoch, nr_episodes, env, controller, params):
@@ -46,7 +43,6 @@ def run_episodes(epoch, nr_episodes, env, controller, params):
     request_messages_sent = 0
     response_messages_sent = 0
     messages_sent = 0
-    joint_actions_history = []
     for _ in range(nr_episodes):
         result = run_episode(epoch, env, controller, params)
         for i, dR, uR in zip(range(env.nr_agents), result["discounted_returns"], result["undiscounted_returns"]):
@@ -57,7 +53,6 @@ def run_episodes(epoch, nr_episodes, env, controller, params):
         request_messages_sent += (result["request_messages_sent"]*1.0)/nr_episodes
         response_messages_sent += (result["response_messages_sent"]*1.0)/nr_episodes
         messages_sent += (result["messages_sent"]*1.0)/nr_episodes
-        joint_actions_history.append(result["joint_actions_history"])
     return {
         "discounted_returns": discounted_returns.tolist(),
         "undiscounted_returns": undiscounted_returns.tolist(),
@@ -66,7 +61,6 @@ def run_episodes(epoch, nr_episodes, env, controller, params):
         "request_messages_sent": request_messages_sent,
         "response_messages_sent": response_messages_sent,
         "messages_sent": messages_sent,
-        "joint_actions_history": joint_actions_history
     }
 
 def run_training(env, controller, params):
@@ -79,7 +73,6 @@ def run_training(env, controller, params):
     request_messages_sent = []
     response_messages_sent = []
     messages_sent = []
-    joint_actions_history = []
     for i in range(params["nr_epochs"]):
         start = time.time()
         result = run_episodes(i, episodes_per_epoch, env, controller, params)
@@ -108,7 +101,6 @@ def run_training(env, controller, params):
             return_list.append(float(new_return))
         for return_list, new_return in zip(undiscounted_returns, result["undiscounted_returns"]):
             return_list.append(float(new_return))
-        joint_actions_history.append(result["joint_actions_history"])
     result = {
         "discounted_returns": discounted_returns,
         "undiscounted_returns": undiscounted_returns,
@@ -118,7 +110,6 @@ def run_training(env, controller, params):
         "response_messages_sent": response_messages_sent,
         "messages_sent": messages_sent,
         "token_values": token_values,
-        "joint_actions_history": joint_actions_history
     }
     if "directory" in params:
         data.save_json(join(params["directory"], "results.json"), result)

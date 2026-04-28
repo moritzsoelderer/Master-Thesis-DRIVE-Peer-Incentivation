@@ -1,5 +1,6 @@
-from main import actor_critic, lio, inequity_aversion, mate, drive, controller
-from main import unstable_communication
+from main.DRIVE.src.controllers import controller, actor_critic, lio, inequity_aversion, mate, drive
+from main.DRIVE_ext.src import unstable_communication
+
 from main.DRIVE_ext.src.response_misreporting import ResponseMisreportingDrive
 
 

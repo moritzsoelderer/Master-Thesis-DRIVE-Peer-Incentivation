@@ -13,9 +13,15 @@ class ResponseMisreportingDrive(DRIVE):
         self.rng = np.random.default_rng(1234)
 
     def update_token_value(self, i, neighborhood):
-        own_estimate = np.mean(self.reward_buffer[:, i])
-        misreporting_agents = [j for j in range(len(neighborhood)) if self.rng.random() < self.misreporting_agents_ratio]
-        for j in misreporting_agents:
-            self.trust_request_matrix[j, i] = own_estimate * self.misreporting_agents_estimate_relative
-
-        super(DRIVE, self).update_token_value(i, neighborhood)
+        is_misreporting = self.rng.random() < self.misreporting_agents_ratio
+        if is_misreporting:
+            # set own estimate slightly smaller than the minimal reward sent in the request
+            min_request = self.trust_request_matrix[neighborhood, i].min()
+            perc_factor = self.misreporting_agents_estimate_relative if min_request >= 0 else 1 - self.misreporting_agents_estimate_relative
+            own_estimate = self.trust_request_matrix[neighborhood, i].min() * perc_factor
+        else:
+            own_estimate = np.mean(self.reward_buffer[:, i])
+        neighborhood_size = len(neighborhood) * 1.0
+        if neighborhood_size > 0:
+            # Track all the reward differences according to Algorithm 2
+            self.tracked_deltas[i] += np.mean(own_estimate - self.trust_request_matrix[neighborhood, i])
