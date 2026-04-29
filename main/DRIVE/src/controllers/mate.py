@@ -51,7 +51,7 @@ class MATE(ActorCritic):
                 next_history = torch.tensor(numpy.asarray([next_history]), dtype=torch.float32, device=self.device)
                 self.current_values[agent_id] = self.get_values(agent_id, history)[0].item()
                 self.next_values[agent_id] = self.get_values(agent_id, next_history)[0].item()
-            return reward + self.gamma*self.next_values[agent_id] - self.current_values[agent_id] >= 0
+            return reward + self.next_values[agent_id] - self.current_values[agent_id] >= 0
         if self.mate_mode == VALUE_DECOMPOSE_MODE:
             return False
 

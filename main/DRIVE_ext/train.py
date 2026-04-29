@@ -27,7 +27,26 @@ if len(sys.argv) > 4:
         suffix = '_' + str(params["misreporting_agents_ratio"]) + '_' + str(params["misreporting_agents_estimate_relative"]) + '_'
         print("RESPONSE-MISREPORTING " + suffix)
 
+"""
+seed = 1234
+np.random.seed(seed)
+torch.manual_seed(seed)
+random.seed(seed)
 
+env = domains.make(params)
+env.reset()
+controller = algorithms.make(params)
+
+params["directory"] = params["output_folder"] + "/" + (params["data_prefix_pattern"] + suffix). \
+    format(
+    params["nr_agents"], \
+    params["domain_name"], \
+    drift_function_name, \
+    params["algorithm_name"])
+params["directory"] = data.mkdir_with_timestap(params["directory"])
+experiments.run_training(env, controller, params)
+
+"""
 def execute_in_parallel(seed, params, suffix):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -39,14 +58,16 @@ def execute_in_parallel(seed, params, suffix):
     env.reset()
     controller = algorithms.make(params)
 
-    params["directory"] = params["output_folder"] + "/" + (params["data_prefix_pattern"] + suffix).\
+    params["directory"] = params["output_folder"] + "/" + (params["data_prefix_pattern"] + suffix). \
         format(
-            params["nr_agents"],\
-            params["domain_name"],\
-            drift_function_name,\
-            params["algorithm_name"])
+        params["nr_agents"], \
+        params["domain_name"], \
+        drift_function_name, \
+        params["algorithm_name"])
     params["directory"] = data.mkdir_with_timestap(params["directory"])
     experiments.run_training(env, controller, params)
 
-joblib.Parallel(n_jobs=12, verbose=50)(delayed(execute_in_parallel)(seed, params, suffix) for seed in range(1, 13))
 
+print("Epochs", params["nr_epochs"])
+
+joblib.Parallel(n_jobs=12, verbose=50)(delayed(execute_in_parallel)(seed, params, suffix) for seed in range(1, 13))
