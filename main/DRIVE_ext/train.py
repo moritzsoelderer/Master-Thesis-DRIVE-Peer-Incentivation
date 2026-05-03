@@ -70,4 +70,4 @@ def execute_in_parallel(seed, params, suffix):
 
 print("Epochs", params["nr_epochs"])
 
-joblib.Parallel(n_jobs=12, verbose=50)(delayed(execute_in_parallel)(seed, params, suffix) for seed in range(1, 13))
+joblib.Parallel(n_jobs=8, verbose=50)(delayed(execute_in_parallel)(seed, params, suffix) for seed in range(1, 9))

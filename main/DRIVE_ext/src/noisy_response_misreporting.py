@@ -4,18 +4,20 @@ from main.DRIVE.src.controllers.drive import DRIVE
 from main.DRIVE.src.utils import get_param_or_default
 
 
-class ResponseMisreportingDrive(DRIVE):
+class NoisyResponseMisreportingDrive(DRIVE):
 
     def __init__(self, params):
-        super(ResponseMisreportingDrive, self).__init__(params)
+        super(NoisyResponseMisreportingDrive, self).__init__(params)
         self.misreporting_agents_ratio = get_param_or_default(params, "misreporting_agents_ratio", 0.2)
-        self.normalized_ratio = params["nr_agents"] * self.misreporting_agents_ratio / 12
+        self.noise_perc = get_param_or_default(params, "noise_perc", 0.25)
 
     def update_token_value(self, i, neighborhood):
-        is_misreporting = np.random.rand() < self.normalized_ratio
+        is_misreporting = np.random.rand() < self.misreporting_agents_ratio
         if is_misreporting:
             # set own estimate to the minimal reward sent in the request
-            own_estimate = self.trust_request_matrix[neighborhood, i].min()
+            mean = np.mean(self.reward_buffer[:, i])
+            scale = self.noise_perc * reward_range # implement way to find reward range
+            own_estimate = mean + np.random.normal(loc=0, scale=scale) # add gaussian noise
         else:
             own_estimate = np.mean(self.reward_buffer[:, i])
         neighborhood_size = len(neighborhood) * 1.0

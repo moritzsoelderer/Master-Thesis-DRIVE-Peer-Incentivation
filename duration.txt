@@ -1,0 +1,8 @@
+Matrix-IPD, 12 seeds, 300 epochs, matebook,  68.9min (joblib parallelization)
+CoinGame-2, 12 seeds, 100 epochs, matebook,  19.8min (joblib parallelization)
+CoinGame-4, 12 seeds, 100 epochs, matebook,  40.7min (joblib parallelization)
+CoinGame-4, Unstable Comm., 8 seeds, 300 epochs, matebook,   81.8min (joblib parallelization)
+CoinGame-4, 12 seeds, 300 epochs, matebook,  213.8min (joblib parallelization)  # eher 130 (Laptop in Tasche)
+CoinGame-2, 12 seeds, 300 epochs, matebook,  48.4min (joblib parallelization)
+CoinGame-2, Unstable Comm., 8 seeds, 300 epochs, matebook,  43.6min (joblib parallelization)
+Harvest-12, 12 seeds, 300 epochs, mvs-chair,  117.5min (joblib parallelization)

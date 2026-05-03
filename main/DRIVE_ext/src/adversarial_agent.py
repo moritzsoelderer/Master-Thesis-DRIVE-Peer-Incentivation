@@ -1,19 +1,18 @@
 import numpy as np
 
 from main.DRIVE.src.controllers.drive import DRIVE
-from main.DRIVE.src.utils import get_param_or_default
 
 
-class ResponseMisreportingDrive(DRIVE):
+class AdversarialAgentDrive(DRIVE):
 
     def __init__(self, params):
-        super(ResponseMisreportingDrive, self).__init__(params)
-        self.misreporting_agents_ratio = get_param_or_default(params, "misreporting_agents_ratio", 0.2)
-        self.normalized_ratio = params["nr_agents"] * self.misreporting_agents_ratio / 12
+        super(AdversarialAgentDrive, self).__init__(params)
+        self.num_adversarial_agents = params["num_adversarial_agents"]
+        assert self.num_adversarial_agents <= params["nr_agents"]
+        self.adversarial_agents_indices = list(range(self.num_adversarial_agents))
 
     def update_token_value(self, i, neighborhood):
-        is_misreporting = np.random.rand() < self.normalized_ratio
-        if is_misreporting:
+        if i in self.adversarial_agents_indices:
             # set own estimate to the minimal reward sent in the request
             own_estimate = self.trust_request_matrix[neighborhood, i].min()
         else:
