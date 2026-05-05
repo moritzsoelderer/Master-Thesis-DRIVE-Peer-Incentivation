@@ -17,6 +17,3 @@ params["learning_rate"] = 0.001
 params["output_folder"] = "output"
 params["data_prefix_pattern"] = "{}-agents_domain-{}_drift-{}_{}"
 params["torch_device"] = device
-
-## additional (moritz)
-params["failing_communication_ratio"] = 0.1

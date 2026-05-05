@@ -4,6 +4,7 @@ import copy
 
 from main.DRIVE.src.environments.environment import Environment
 from main.DRIVE.src.utils import get_param_or_default
+from scipy.signal import convolve2d
 
 NOOP = 0
 MOVE_NORTH = 1
@@ -150,27 +151,33 @@ class HarvestEnvironment(Environment):
         return done
 
     def apple_regrowth(self):
-        for x in range(self.width):
-            for y in range(self.height):
-                if self.apple_map[x][y] == 0:
-                    nr_neighbor_apples = 0
-                    for dx in range(-2, 3):
-                        for dy in range(-2, 3):
-                            x1 = x + dx
-                            y1 = y + dy
-                            distance = abs(dx) + abs(dy)
-                            within_bounds = x1 >= 0 and y1 >= 0 and x1 < self.width and y1 < self.height 
-                            if within_bounds and distance <= 2 and self.apple_map[x1][y1] > 0:
-                                nr_neighbor_apples += 1
-                    P = 0
-                    if nr_neighbor_apples in [1,2]:
-                        P = 0.01
-                    if nr_neighbor_apples in [3,4]:
-                        P = 0.05
-                    if nr_neighbor_apples > 4:
-                        P = 0.1
-                    new_apple = numpy.random.choice([0,1], p=[1-P, P])
-                    self.apple_map[x][y] = new_apple
+
+        # kernel counts neighbors within manhattan distance <= 2
+        kernel = numpy.array([
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1],  # center is 0 — don't count the cell itself
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0]
+        ])
+
+        # count neighbor apples for every empty cell at once
+        neighbor_counts = convolve2d(self.apple_map, kernel, mode='same', boundary='fill', fillvalue=0)
+
+        # only regrow empty cells
+        empty_mask = self.apple_map == 0
+
+        # compute probabilities per cell
+        probs = numpy.zeros_like(self.apple_map, dtype=numpy.float32)
+        probs[neighbor_counts >= 5] = 0.1
+        probs[(neighbor_counts == 3) | (neighbor_counts == 4)] = 0.05
+        probs[(neighbor_counts == 1) | (neighbor_counts == 2)] = 0.01
+
+        # sample regrowth for all empty cells at once
+        random_draws = numpy.random.random(self.apple_map.shape)
+        new_apples = empty_mask & (random_draws < probs)
+
+        self.apple_map[new_apples] = 1
 
     def local_observation(self, agent_id):
         observation = numpy.zeros(self.observation_shape)

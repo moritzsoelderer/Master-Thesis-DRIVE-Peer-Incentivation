@@ -24,24 +24,26 @@ class Controller:
         self.observation_dim = params["observation_dim"]
         self.input_dim = int(self.observation_dim*self.history_length)
         self.eps = numpy.finfo(numpy.float32).eps.item()
-        self.actions = list(range(self.nr_actions))
+        self.actions = torch.tensor(list(range(self.nr_actions)), device=self.device)
         self.joint_histories = self.reset_joint_histories()
         self.actor_nets = []
         self.critic_nets = []
-        self.token_values = numpy.zeros(self.nr_agents)
+        self.token_values = torch.zeros(self.nr_agents, device=self.device)
+        self.joint_old_probs = torch.zeros((self.nr_agents, self.nr_actions), device=self.device)
         self.R_max = get_param_or_default(params, "R_max", 3)
         self.memories = [ExperienceMemory(params, i, self.device) for i in range(self.nr_agents)]
 
     def reset_joint_histories(self):
-        return [\
-            [numpy.zeros(self.observation_dim) for _ in range(self.history_length)]\
-            for _ in range(self.nr_agents)]
+        return torch.zeros(
+            (self.nr_agents, self.history_length, self.observation_dim),
+            dtype=torch.float32,
+            device=self.device
+        )
 
     def update_joint_histories(self, observations):
-        new_joint_history = []
-        for history, observation in zip(self.joint_histories, observations):
-            new_joint_history.append(list(history[1:]) + [observation])
-        return new_joint_history
+        self.joint_histories = torch.roll(self.joint_histories, -1, dims=1)
+        self.joint_histories[:, -1, :] = observations
+        return self.joint_histories
 
     def save_model_weights(self, path):
         for i, actor_net, critic_net in zip(range(len(self.actor_nets)), self.actor_nets, self.critic_nets):
@@ -65,20 +67,24 @@ class Controller:
     def policy(self, observations):
         assert len(observations) == self.nr_agents,\
             "Expected {}, got {}".format(len(observations), self.nr_agents)
+        observations = torch.as_tensor(numpy.array(observations), dtype=torch.float32, device=self.device)
         joint_probs = []
         joint_action = []
         self.joint_histories = self.update_joint_histories(observations)
         for i in range(self.nr_agents):
             probs = self.local_probs(self.joint_histories[i], i)
             joint_probs.append(probs)
-            joint_action.append(int(numpy.random.choice(self.actions, p=probs)))
+            indices = torch.multinomial(probs, num_samples=1, replacement=True)
+            self.joint_old_probs[i] = probs
+            joint_action.append(self.actions[indices])
         return joint_action, joint_probs
 
     def local_probs(self, history, agent_id):
-        return numpy.ones(self.nr_actions)*1.0/self.nr_actions
+        return torch.ones(self.nr_actions, device=self.device)*1.0/self.nr_actions
 
     def update(self, observations, joint_action, rewards, next_observations, done, info):
         joint_histories = self.joint_histories
+        next_observations = torch.as_tensor(numpy.array(next_observations), dtype=torch.float32, device=self.device)
         next_joint_histories = self.update_joint_histories(next_observations)
         transition = self.prepare_transition(joint_histories, joint_action, rewards, next_joint_histories, done, info)
         is_full = False
@@ -93,7 +99,6 @@ class Controller:
         return transition
         
     def prepare_transition(self, joint_histories, joint_action, rewards, next_joint_histories, done, info):
-        joint_old_probs = [self.local_probs(history, i) for i, history in enumerate(joint_histories)]
         return {
             "joint_histories" : joint_histories,
             "joint_action": joint_action,
@@ -102,7 +107,7 @@ class Controller:
             "incentive_rewards": [torch.zeros(self.nr_agents, dtype=torch.float32, device=self.device) for _ in range(self.nr_agents)],
             "next_joint_histories": next_joint_histories,
             "done": done,
-            "joint_old_probs":joint_old_probs,
+            "joint_old_probs": self.joint_old_probs,
             "request_messages_sent": 0,
             "response_messages_sent": 0}
 

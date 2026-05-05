@@ -47,8 +47,6 @@ class MATE(ActorCritic):
             return reward >= last_reward
         if self.mate_mode == TD_ERROR_MODE:
             if recompute:
-                history = torch.tensor(numpy.asarray([history]), dtype=torch.float32, device=self.device)
-                next_history = torch.tensor(numpy.asarray([next_history]), dtype=torch.float32, device=self.device)
                 self.current_values[agent_id] = self.get_values(agent_id, history)[0].item()
                 self.next_values[agent_id] = self.get_values(agent_id, next_history)[0].item()
             return reward + self.next_values[agent_id] - self.current_values[agent_id] >= 0
@@ -79,28 +77,19 @@ class MATE(ActorCritic):
         self.trust_request_matrix[:] = 0
         self.trust_response_matrix[:] = 0
         # 1. Send trust requests
-        defector_id = -1
-        if self.defect_mode != NO_DEFECT:
-            defector_id = numpy.random.randint(0, self.nr_agents)
-        request_receive_enabled = [self.sample_no_comm_failure() for _ in range(self.nr_agents)]
         for i, reward, history, next_history in zip(range(self.nr_agents), original_rewards, joint_histories, next_joint_histories):
             self.update_token_value(i, info["neighbor_agents"][i])
-            requests_enabled = i != defector_id or self.defect_mode not in [DEFECT_ALL, DEFECT_SEND]
-            requests_enabled = requests_enabled and self.sample_no_comm_failure()
-            if requests_enabled and self.can_rely_on(i, reward, history, next_history, recompute=True): # Analyze the "winners" of that step
+            if self.can_rely_on(i, reward, history, next_history, recompute=True): # Analyze the "winners" of that step
                 neighborhood = info["neighbor_agents"][i]
                 self.trust_request_matrix[neighborhood,i] += self.get_token_value(i)
                 transition["request_messages_sent"] += len(neighborhood)
         # 2. Send trust responses
         for i, history, next_history in zip(range(self.nr_agents), joint_histories, next_joint_histories):
             neighborhood = info["neighbor_agents"][i]
-            respond_enabled = i != defector_id or self.defect_mode not in [DEFECT_ALL, DEFECT_RESPONSE]
-            respond_enabled = respond_enabled and self.sample_no_comm_failure()
-            if request_receive_enabled[i]:
-                trust_requests = self.trust_request_matrix[i, neighborhood]
-                if len(trust_requests) > 0:
-                    transition["rewards"][i] += self.request_as_reward(i, trust_requests)
-            if respond_enabled and len(neighborhood) > 0:
+            trust_requests = self.trust_request_matrix[i, neighborhood]
+            if len(trust_requests) > 0:
+                transition["rewards"][i] += self.request_as_reward(i, trust_requests)
+            if len(neighborhood) > 0:
                 if self.can_rely_on(i, transition["rewards"][i], history, next_history, recompute=False):
                     accept_trust = self.get_token_value(i)
                 else:
@@ -114,9 +103,7 @@ class MATE(ActorCritic):
         # 3. Receive trust responses
         for i, trust_responses in enumerate(self.trust_response_matrix):
             neighborhood = info["neighbor_agents"][i]
-            receive_enabled = i != defector_id or self.defect_mode not in [DEFECT_ALL, DEFECT_RECEIVE]
-            receive_enabled = receive_enabled and self.sample_no_comm_failure()
-            if receive_enabled and len(neighborhood) > 0 and trust_responses.any():
+            if len(neighborhood) > 0 and trust_responses.any():
                 filtered_trust_responses = [trust_responses[x] for x in neighborhood if abs(trust_responses[x]) > 0]
                 if len(filtered_trust_responses) > 0:
                     transition["rewards"][i] += self.response_as_reward(i, filtered_trust_responses)

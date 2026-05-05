@@ -13,11 +13,12 @@ def run_episode(epoch, env, controller, params):
     request_messages_sent = 0
     response_messages_sent = 0
     drift_function = params["drift_function"]
+    controller.R_max = drift_function(epoch, params["R_max"])
+
     while not done:
         joint_action, joint_probs = controller.policy(observations)
         next_observations, rewards, done, info = env.step(joint_action)
         rewards = drift_function(epoch, rewards)
-        controller.R_max = drift_function(epoch, params["R_max"])
         joint_probs_history.append(joint_probs)
         time_step += 1
         transition = controller.update(observations, joint_action, rewards, next_observations, done, info)

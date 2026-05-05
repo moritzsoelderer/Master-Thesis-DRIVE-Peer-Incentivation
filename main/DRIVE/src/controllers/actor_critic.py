@@ -70,8 +70,7 @@ class ActorCritic(Controller):
         return not self.sample_comm_failure()
     
     def local_probs(self, history, agent_id):
-        history = torch.tensor(numpy.array([history]), dtype=torch.float32, device=self.device)
-        return self.actor_nets[agent_id](history).detach().cpu().numpy()[0]
+        return self.actor_nets[agent_id](history).detach()[0]
 
     def preprocess(self):
         return None
