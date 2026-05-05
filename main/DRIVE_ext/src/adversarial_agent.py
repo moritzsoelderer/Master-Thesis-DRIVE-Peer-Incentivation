@@ -7,7 +7,7 @@ class AdversarialAgentDrive(DRIVE):
 
     def __init__(self, params):
         super(AdversarialAgentDrive, self).__init__(params)
-        self.num_adversarial_agents = params["num_adversarial_agents"]
+        self.num_adversarial_agents = int(params["num_adversarial_agents"])
         assert self.num_adversarial_agents <= params["nr_agents"]
         self.adversarial_agents_indices = list(range(self.num_adversarial_agents))
 
